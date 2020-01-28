@@ -13,6 +13,10 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <time.h>
+
+#define SIZE 10
+#define SELECTED 7
 
 struct room {
     char *name;
@@ -30,9 +34,25 @@ struct room *getRandomRoom();
 int canAddConnectionFrom(struct room *roomX);
 int connectionAlreadyExists(struct room *roomX, struct room *roomY);
 
+/******** Unit Test *******/
+void testRoomBank() {
+    int i;
+    printf("Testing 7 rooms.\n");
+    for (i = 0; i < 7; ++i) {
+        printf("Room %d = %s\n", (i + 1), roomBank());
+    }
+}
+
+
+
+/*************************/
 
 
 int main() {
+    srand(time(NULL));
+
+    /** run tests **/
+  /*  testRoomBank();  Test passed */
 
 
     return 0;
@@ -80,8 +100,10 @@ Return 1 if all rooms have 3 to 6 outbound connections, otherwise returns 0
 
 */
 int  isGraphful(struct room **list) {
+    int flag = 0;
 
 
+    return flag;
 }
 
 
@@ -100,8 +122,16 @@ void addRandomConnection() {
 */
 char *roomBank() {
     char *selected = NULL;
+    int value = -1;
+    char *wordBank[10] = { "Gallery", "Ballroom", "Billiard"
+                            , "Library", "Office", "Armory"
+                            , "Stables", "Chambers", "Kitchen", "Theater" };
 
-
+    /* generate a random value within the range of wordBank array */
+    value = rand() % (SIZE - 1);
+    /* copy random string to selected string */
+    selected = (char *) malloc (9 * sizeof(char));
+    strcpy(selected, wordBank[value]);
     return selected;
 }
 
