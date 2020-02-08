@@ -54,31 +54,6 @@ void makeRandomList(struct room **list);
 void writeOneRoom(FILE *stream,struct room *aRoom);
 void createFileName(char *fileName, char *directoryName, struct room *aRoom);
 
-/******** Unit Test *******/
-
-void testRooms(struct room **list) {
-    int i;
-    int j = 0;
-
-    for (i = 0; i < SELECTED; ++i) {
-        printf("ROOM NAME: %s\n", list[i]->name);
-        while (list[i]->connections[j] && j < CONN_SZ) {
-            printf("CONNECTION %d: %s\n", (j + 1), list[i]->connections[j]->name);
-            ++j;
-        } 
-        printf ("Connection Count: %d\n", list[i]->connectCount);
-        printf("\n");
-        j = 0;
-    }
-}
-
-
-
-void testLoop(char *name, int line) {
-    printf("Loop in %s : %d\n", name, line);
-}
-
-/*************************/
 
 
 int main() {
@@ -100,13 +75,10 @@ int main() {
    if (writeFile(directoryName, list) == 0) {
         exit(EXIT_FAILURE);
    }
-
-    /** run tests **/
-/*    testRooms(list); */
-
-    destroyList(list);
-    return 0;
+   destroyList(list);
+   return 0;
 }
+
 
 /* Create a list of room struct pointers */
 struct room **makeRoomList() {
@@ -154,7 +126,6 @@ void destroyList(struct room **list) {
         list = NULL;
     }
 }
-
 
 
 /*
@@ -257,7 +228,6 @@ void createGraph(struct room **list) {
 }
 
 
-
 /*
 Return 1 if all rooms have 3 to 6 outbound connections, otherwise returns 0
 
@@ -318,7 +288,6 @@ int duplicateRooms(struct room **list, char *search) {
     }
     return found;
 }
-
 
 
 /*
@@ -434,7 +403,6 @@ void connectRoom( struct room *roomX, struct room *roomY) {
 }
 
 
-
 /*
 Returns 1 if roomX and roomY are the same room, otherwise returns 0
 
@@ -447,15 +415,4 @@ int isSameRoom(struct room *roomX, struct room *roomY) {
     }
     return flag;
 }
-
-
-
-
-
-
-
-
-
-
-
 
