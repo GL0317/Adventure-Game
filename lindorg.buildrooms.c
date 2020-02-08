@@ -14,12 +14,16 @@
 #include <assert.h>
 #include <string.h>
 #include <time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #define SIZE 10
 #define SELECTED 7
 #define NAME_SZ 9
 #define CONN_SZ 6
 #define MIN 3
+#define STR 100
 
 struct room {
     int id;
@@ -30,8 +34,8 @@ struct room {
 };
 
 
-int makeDir(char * directoryName);
-int writeFile(char *directoryName, struct room *aRoom);
+int makeDir(char * directoryName, int pid);
+int writeFile(char *directoryName, struct room **list);
 void createGraph(struct room **list);
 int  isGraphFull(struct room **list);
 void addRandomConnection();
@@ -47,6 +51,8 @@ void addRandomConnection(struct room **list);
 struct room **makeRoomList();
 void destroyList(struct room **list);
 void makeRandomList(struct room **list);
+void writeOneRoom(FILE *stream,struct room *aRoom);
+void createFileName(char *fileName, char *directoryName, struct room *aRoom);
 
 /******** Unit Test *******/
 
@@ -66,6 +72,8 @@ void testRooms(struct room **list) {
     }
 }
 
+
+
 void testLoop(char *name, int line) {
     printf("Loop in %s : %d\n", name, line);
 }
@@ -75,6 +83,9 @@ void testLoop(char *name, int line) {
 
 int main() {
     struct room **list = NULL;
+    char directoryName[STR] = "lindorg.rooms.";
+    int processID = getpid();
+    int exitStatus;
 
     srand(time(NULL));
     /* initialize a list of rooms */
@@ -82,6 +93,13 @@ int main() {
     /* generate rooms and make connections */
     makeRandomList(list);
     createGraph(list); 
+    exitStatus = makeDir(directoryName, processID);
+    if (exitStatus == -1) {
+        exit(EXIT_FAILURE);
+    }
+   if (writeFile(directoryName, list) == 0) {
+        exit(EXIT_FAILURE);
+   }
 
     /** run tests **/
 /*    testRooms(list); */
@@ -121,6 +139,9 @@ void destroyList(struct room **list) {
                 /* delete name */
                 free(list[index]->name);
                 list[index]->name = NULL;
+                /* delete room type */
+                free(list[index]->roomType);
+                list[index]->roomType = NULL;
                 /* reset connection count */
                 list[index]->connectCount = 0;
                 /* delete room */
@@ -140,10 +161,22 @@ void destroyList(struct room **list) {
 Creates a directory
 
 */
-int makeDir(char * directoryName) {
+int makeDir(char * directoryName, int pid) {
     int flag = 0;
+    char pidStr[10];
 
+    memset(pidStr, '\0', 10);
 
+    /* change pid to to string */
+    flag = snprintf(pidStr, 10, "%d", pid);
+    /* concatenate pid string to directory name */
+    if (flag > 0) {
+        strcat(directoryName, pidStr);
+        /* create the directory */
+        flag = mkdir(directoryName, 0755);
+     } else {
+         flag = -1;
+     }
     return flag;
 }
 
@@ -152,11 +185,65 @@ int makeDir(char * directoryName) {
 writes files to a specific directory
 
 */
-int writeFile(char *directoryName, struct room *aRoom) {
-    int flag = 0;
+int writeFile(char *directoryName, struct room **list) {
+    int flag = 1;
+    char fileName[STR];
+    int i;
+    FILE *aFile;
 
-
+    memset(fileName, '\0', STR);
+    /* for each room */
+    for ( i = 0; i < SELECTED; ++i) {
+        /* create the file name */
+        createFileName(fileName, directoryName, list[i]);
+        /* open a file */
+        aFile = fopen(fileName, "w");
+        if (aFile) {
+        /* write room contents to a file */
+            writeOneRoom(aFile, list[i]);
+        } else {
+            flag = 0;
+            break;
+        }
+        /* close file */
+        fclose(aFile);
+        memset(fileName, '\0', STR);
+    }
     return flag;
+}
+
+
+/*
+
+
+*/
+void createFileName(char *fileName, char *directoryName, struct room *aRoom) {
+    char fowardSlash[2] = "/";
+    char suffix[6] = "_room";
+    
+    /* copy directory name to file name */
+    strcpy(fileName, directoryName);
+    /* concatenate the forward slash */
+    strcat(fileName, fowardSlash);
+    /* concatenate the room name */
+    strcat(fileName, aRoom->name); 
+    /* concatenate the suffix */
+    strcat(fileName, suffix); 
+}
+
+
+/*
+
+*/
+void writeOneRoom(FILE *stream,struct room *aRoom) {
+    int j = 0;
+
+    fprintf(stream, "ROOM NAME: %s\n", aRoom->name);
+    while (aRoom->connections[j] && j < aRoom->connectCount) {
+        fprintf(stream, "CONNECTION %d: %s\n", (j + 1), aRoom->connections[j]->name);
+        ++j;
+    }
+    fprintf (stream, "ROOM TYPE: %s\n", aRoom->roomType);
 }
 
 
@@ -277,6 +364,9 @@ void makeRandomList(struct room **list) {
         /* initialize connection count and room type */
         list[i]->connectCount = 0;
         list[i]->roomType = NULL;
+        list[i]->roomType = (char *)malloc(NAME_SZ * sizeof(char));
+        assert(list[i]->roomType != 0);
+        strcpy(list[i]->roomType, "MID_ROOM");
     }
 }
 
