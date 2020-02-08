@@ -19,8 +19,10 @@
 #define SELECTED 7
 #define NAME_SZ 9
 #define CONN_SZ 6
+#define MIN 3
 
 struct room {
+    int id;
     char *name;
     int connectCount;
     struct room **connections;
@@ -38,13 +40,14 @@ int duplicateRooms(struct room **list, char *search);
 struct room *getRandomRoom(struct room **list);
 int canAddConnectionFrom(struct room *roomX);
 int connectionAlreadyExists(struct room *roomX, struct room *roomY);
-void makeRoomList(struct room **list);
 void destroyList(struct room **list);
 int isSameRoom(struct room *roomX, struct room *roomY);
 void connectRoom( struct room *roomX, struct room *roomY);
 void addRandomConnection(struct room **list);
-void makeRoomList(struct room **list);
+struct room **makeRoomList();
 void destroyList(struct room **list);
+int roomIDExist(struct room **list, int num);
+void makeRandomList(struct room **list);
 
 /******** Unit Test *******/
 /*void testRoomBank() {
@@ -54,6 +57,26 @@ void destroyList(struct room **list);
         printf("Room %d = %s\n", (i + 1), roomBank());
     }
 } */
+
+void testRooms(struct room **list) {
+    int i;
+    int j = 0;
+
+    for (i = 0; i < SELECTED; ++i) {
+        printf("ROOM NAME: %s\n", list[i]->name);
+        while (list[i]->connections[j] && j < CONN_SZ) {
+            printf("CONNECTION %d: %s\n", (j + 1), list[i]->connections[j]->name);
+            ++j;
+        } 
+        printf ("Connection Count: %d\n", list[i]->connectCount);
+        printf("\n");
+        j = 0;
+    }
+}
+
+void testLoop(char *name, int line) {
+    printf("Loop in %s : %d\n", name, line);
+}
 
 
 
@@ -65,26 +88,30 @@ int main() {
 
     srand(time(NULL));
     /* initialize a list of rooms */
-    makeRoomList(list);
+    list = makeRoomList();
     /* generate rooms and make connections */
-    createGraph(list);
+    makeRandomList(list);
+ /*   printf("Before Creating the graph\n"); ************/
+    createGraph(list); 
 
     /** run tests **/
   /*  testRoomBank();  Test passed */
+    testRooms(list);
 
     destroyList(list);
     return 0;
 }
 
 /* Create a list of room struct pointers */
-void makeRoomList(struct room **list) {
+struct room **makeRoomList() {
     int index;
 
-    list = (struct room **)malloc(SELECTED * sizeof(struct room*));
+    struct room **list = (struct room **)malloc(SELECTED * sizeof(struct room*));
     assert(list != 0);
     for (index = 0; index < SELECTED; ++index) {
         list[index] = NULL;
     }
+    return list;
 }
 
 
@@ -145,12 +172,12 @@ int writeFile(char *directoryName, struct room *aRoom) {
 }
 
 
-
 /*
 Create all connection in graph
 */
 void createGraph(struct room **list) {
     while (isGraphFull(list) == 0) {
+/*        testLoop("createGraph", 173);****************************/
         addRandomConnection(list); 
     }
 }
@@ -164,19 +191,18 @@ Return 1 if all rooms have 3 to 6 outbound connections, otherwise returns 0
 int  isGraphFull(struct room **list) {
     int flag = 1;
     int index = 0;
-    int minimum = 3;
 
     assert(list != 0);
     while (index < SELECTED && flag ) {
-     /*   if (!list[index]) {
+        if (!list[index]) {
             flag = 0;
-        } else if (list[index]->connectCount < minimum){
+        } else if (list[index]->connectCount < MIN){
+            flag = 0;
+        } 
+        /***** Refactor code  ***************************/
+ /*       if (!list[index] || (list[index] && list[index]->connectCount < minimum)) {
             flag = 0;
         } */
-        /***** Refactor code  ***************************/
-        if (!list[index] || (list[index] && list[index]->connectCount < minimum)) {
-            flag = 0;
-        }
         ++index;
     }
     return flag;
@@ -192,32 +218,47 @@ void addRandomConnection(struct room **list) {
     struct room *B = NULL;
 
     while (1) {
+   /*     testLoop("addRandomConnection in while(1)", 221);  ***/
         /* retrieve room A and see if there can be a connection */ 
         A = getRandomRoom(list);
-        if (canAddConnectionFrom(A)) {
+        if  (canAddConnectionFrom(A)) {
             break;
         }
     }
+/*    printf("BEFORE DO WHILE()!!!!!!!!!!!!!!!!!!!!\n\n"); ********************************************/
     do {
         /* retrieve room B */
+/*        testLoop("addRandomConnection in do while()", 232);  ***/
         B = getRandomRoom(list);
     } while (canAddConnectionFrom(B)== 0 || isSameRoom(A, B) == 1 || connectionAlreadyExists(A, B) == 1);
+    
+/*    printf("AFTER DO WHILE()!!!!!!!!!!!!!!!!!!!!\n\n"); *******************************************/
     connectRoom(A, B);
     connectRoom(B, A);
 }
+
 
 /*
 
 */
 int duplicateRooms(struct room **list, char *search) {
-    int index = 0;
+    int i = 0;
     int found = 0;
 
-    while (list[index] && index < SELECTED && !found) {
-        if (!strcmp(list[index]->name, search)) {
+/*    for (i = 0; i < SELECTED; ++i) {
+        if (list[i] && list[i]->name && (strcmp(list[i]->name, search) == 0)) {
             found = 1;
+            break;
         }
-        ++index;
+    } */
+    while (i < SELECTED && list[i]->name && !found) {
+ /*       testLoop("duplicateRooms", 252); ********/
+    /*    if (list[i]->name) {   */
+            if (!strcmp(list[i]->name, search)) {
+                found = 1;
+            }
+     /*   } */
+        ++i;
     }
     return found;
 }
@@ -234,9 +275,10 @@ char *roomBank(struct room **list) {
                             , "Library", "Office", "Armory"
                             , "Stables", "Chambers", "Kitchen", "Theater" };
     /* generate a random value within the range of wordBank array */
-    do {
-        value = rand() % (SIZE - 1);
-    } while( duplicateRooms(list, wordBank[value]));
+    do { 
+/*       testLoop("roomBank", 275);  ********/
+        value = rand() % SIZE;
+    } while( duplicateRooms(list, wordBank[value])); 
     /* copy random string to selected string */
     selected = (char *) malloc (NAME_SZ * sizeof(char));
     assert(selected != 0);
@@ -246,31 +288,59 @@ char *roomBank(struct room **list) {
 
 
 /*
+
+*/
+void makeRandomList(struct room **list) {
+    int i;
+    int j;
+
+    /* loop through each element of list and generate a random room */
+    for (i = 0; i < SELECTED; ++i) {
+        list[i] = (struct room*)malloc(sizeof(struct room));
+        assert(list[i] != 0); 
+        list[i]->name = roomBank(list); 
+        list[i]->id = i;
+        /* allocate the six connections */
+        list[i]->connections = (struct room **)malloc(CONN_SZ * sizeof(struct room*));
+        assert(list[i]->connections != 0); 
+        for (j = 0; j < CONN_SZ; ++j) {
+            list[i]->connections[j] = NULL;
+        }
+        /* initialize connection count and room type */
+        list[i]->connectCount = 0;
+        list[i]->roomType = NULL;
+    }
+}
+
+
+/*
 Returns a random Room, does NOT validate if connection can be added
 
 */
 struct room *getRandomRoom(struct room **list) {
-    int index;
     int roomIndex;
 
     /* get random index for list */
-    roomIndex = rand() % (SELECTED - 1);
-    if (!list[roomIndex]) {
-        list[roomIndex] = (struct room*)malloc(sizeof(struct room));
-        assert(list[roomIndex] != 0); 
-        /* get room name randomly */
-        list[roomIndex]->name = roomBank(list); 
-        /* allocate an array of 6 empty room connection */
-        list[roomIndex]->connections = (struct room **)malloc(CONN_SZ * sizeof(struct room*));
-        assert(list[roomIndex]->connections != 0); 
-        for (index = 0; index < CONN_SZ; ++index) {
-            list[roomIndex]->connections[index] = NULL;
-        }
-        list[roomIndex]->connectCount = 0;
-        list[roomIndex]->roomType = NULL;
-    }
+    roomIndex = rand() % SELECTED;
+    assert(roomIndex > -1 && roomIndex < SELECTED);
     return  list[roomIndex];
 }
+
+
+/*     */
+int roomIDExist(struct room **list, int num) {
+    int i;
+    int found = 0;
+
+    for (i = 0; i < SELECTED; ++i) {
+        if (list[i] && list[i]->id == num) {
+            found = 1;
+            break;
+        }
+    }
+    return found;
+}
+
 
 
 /*
@@ -280,7 +350,7 @@ Returns 0 if a connection can be added from Room x ( < 6 outbound connections), 
 int canAddConnectionFrom(struct room *roomX) {
     int flag = 0;
 
-    if (roomX->connectCount <= CONN_SZ) {
+    if (roomX->connectCount < CONN_SZ) {
         flag = 1;
      }
 
@@ -294,13 +364,21 @@ Returns 1 if a connection from Room x to Room y already exists, otherwise return
 */
 int connectionAlreadyExists(struct room *roomX, struct room *roomY) {
     int flag = 0;
-    int index = 0;
+   /* int index = 0; */
+    int i;
 
+/*
     while (index < CONN_SZ && roomX->connections[index] && !flag) {
         if (!strcmp(roomX->connections[index]->name, roomY->name)) {
             flag = 1;
         }
         ++index;
+    } */
+    for (i = 0; i < roomX->connectCount; ++i) {
+        if (roomX->connections[i]->id == roomY->id) {
+            flag = 1;
+            break;
+        }
     }
     return flag;
 }
@@ -311,14 +389,15 @@ Connect Rooms x and y together, does not check if this connection is valid
 
 */
 void connectRoom( struct room *roomX, struct room *roomY) {
-    int index = 0;
+    int index = roomX->connectCount;
+    assert (index < (CONN_SZ + 1));
 
     /* find a connection which is NULL */
-    while (index < CONN_SZ && roomX->connections[index]) {
+/*    while (index < CONN_SZ && roomX->connections[index]) {
         ++index;
-    }
+    }*/
     /* when null connection is found, make the connection */
-    if (!roomX->connections[index] && index < CONN_SZ) {
+    if (!roomX->connections[index] && roomX->connectCount < CONN_SZ) {
         roomX->connections[index] = roomY;
         ++roomX->connectCount;
     }
@@ -333,7 +412,7 @@ Returns 1 if roomX and roomY are the same room, otherwise returns 0
 int isSameRoom(struct room *roomX, struct room *roomY) {
     int flag = 0;
 
-    if (!strcmp(roomX->name, roomY->name)) {
+    if (roomX->id == roomY->id) {
         flag = 1;
     }
     return flag;
