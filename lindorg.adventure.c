@@ -4,7 +4,7 @@
  SYNOPSIS:  To compile program ...
     gcc -o lindorg.adventure lindorg.adventure.c -lpthread
 
- AUTHOR:  Gerson Lindor Jr.
+ AUTHOR:  Gerson Lindor Jr. (lindorg@oregonstate.edu)
  DATE CREATED: February 8, 2020
  LAST MODIFIED: February 8, 2020
 */
@@ -46,6 +46,11 @@ void readDirectory (char *directoryName, struct room **list);
 void readFile(char *directoryName, char *fileName, struct room *aRoom);
 void countAllConnections (struct room **list);
 void displayRoom(FILE *stream,struct room *aRoom);
+int searchRooms(struct room **list, char *item, int section);
+int searchConnections(struct room *aRoom, char *item);
+void mainMenu(struct room *aRoom);
+int checkInput(struct room **list, struct room *aRoom, char *response);
+int prompt(struct room **list, int index);
 
 /*** tests ***/
 /*
@@ -71,29 +76,167 @@ void showAll(struct room **list) {
     }
 }
 
-
-
-
-
 /***************/
 
 
 int main() {
     char *directoryName = NULL;
     struct room **list = NULL;
+    int start = -1, end = -1, result = -1;
+    char *victoryPath[1000];
+    int vStep = 0, previousRoom = -1;
 
     /* set up the game */
     list = makeRoomList();
     directoryName = openDirectory();
     readDirectory(directoryName, list);
-
-    /* interact with user */
+    
+    printf("----Bank ----\n");
     showAll(list);
+    printf("------------\n");
+    /* interact with user */
+    /* find start room */
+    start = searchRooms(list, "N/A", 0);
+    /* find end room */
+    end = searchRooms(list, "N/A", 1);
 
+    printf("End Room = %d\n", end);
+    do {
+    /* prompt user */
+        previousRoom = start;
+        result = prompt(list, start);
+        start = result;
+        victoryPath[vStep] = list[result]->name;
+        ++vStep;
+    } while (start != end);
 
+    /* victory message */
+    printf("YOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n");
+    printf("YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS: \n", vStep);
+    int i;
+    for(i = 0; i < vStep; ++i) {
+        printf("%s\n", victoryPath[i]);
+    }
     if (directoryName) { free(directoryName); directoryName = NULL; }
     destroyList(list);
     return 0;
+}
+
+
+int prompt(struct room **list, int index) {
+    char response[STR];
+    int i, strSize, previous;
+
+    do {
+        previous = index;
+        memset(response, '\0', STR);
+        mainMenu(list[index]);
+        printf("WHERE TO? >");
+        fgets(response, STR, stdin);
+        strSize = strlen(response);
+        /* trim off new line */
+        for (i = strSize; i > 0; --i) {
+            if (response[i] == '\n') {
+                response[i] = '\0';
+                break;
+            }
+        }
+        index = checkInput(list, list[index], response);
+        if (index == -1) {
+            printf("\nHUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN.\n\n");
+            index = previous;
+        }
+    } while (index == -1);
+    return index;
+}
+
+
+/*
+
+*/
+void mainMenu(struct room *aRoom) {
+    int j = 0;
+
+    fprintf(stdout, "CURRENT LOCATIONS: %s\n", aRoom->name);
+    printf("POSSIBLE CONNECTIONS: ");
+    while (aRoom->connections[j] && j < (aRoom->connectCount - 1)) {
+        fprintf(stdout, "%s,", aRoom->connections[j]);
+        ++j;
+    }
+    fprintf(stdout, "%s.\n", aRoom->connections[j]);
+    fprintf (stdout, "ROOM TYPE: %s\n", aRoom->roomType);
+}
+
+
+int checkInput(struct room **list, struct room *aRoom, char *response) {
+    int roomIndex = -1;
+    int size = strlen(response) + 1;
+
+    if (size == 0 || size > 9) {
+        return -1;
+    }
+    if(strcmp(response, "time") != 0) {
+        roomIndex = searchConnections(aRoom, response);
+        /* search for the room */
+        if (roomIndex != -1) {
+            roomIndex = searchRooms(list, aRoom->connections[roomIndex], 2);
+        }
+     } else { 
+         return SELECTED;
+     }
+     return roomIndex;
+}
+
+
+/*
+
+*/
+int searchConnections(struct room *aRoom, char *item) {
+    int i, found = -1;
+
+    for (i = 0; i < aRoom->connectCount; ++i) {
+        if (!strcmp(aRoom->connections[i], item)) {
+            found = i;
+            break;
+        }
+    }
+    return found;
+}
+
+
+/*
+
+*/
+int searchRooms(struct room **list, char *item, int section) {
+    int startRoom = -1;
+    int endRoom = -1;
+    int foundRoom = -1;
+    int result, i;
+    
+    for (i = 0; i < SELECTED; ++i) {
+        if ((strcmp(list[i]->name, item) == 0) && section == 2) {
+            foundRoom = i;
+            break;
+         }
+        if ((strcmp(list[i]->roomType, "START_ROOM") == 0) && section == 0) {
+            startRoom = i;
+        }
+        if ((strcmp(list[i]->roomType, "END_ROOM") == 0) && section == 1) {
+            endRoom = i;
+        }
+    }
+    switch(section) {
+        case 0:
+            result = startRoom;
+            break;
+        case 1:
+            result = endRoom;
+            break;
+        case 2:
+            result = foundRoom;
+            break;
+    }
+    return result;
 }
 
 
