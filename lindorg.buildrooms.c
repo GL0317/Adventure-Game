@@ -53,6 +53,8 @@ void destroyList(struct room **list);
 void makeRandomList(struct room **list);
 void writeOneRoom(FILE *stream,struct room *aRoom);
 void createFileName(char *fileName, char *directoryName, struct room *aRoom);
+char *getString(char *data);
+void createStartAndEnd(struct room **list);
 
 
 
@@ -68,15 +70,55 @@ int main() {
     /* generate rooms and make connections */
     makeRandomList(list);
     createGraph(list); 
+    createStartAndEnd(list);
+    /* create directory */
     exitStatus = makeDir(directoryName, processID);
     if (exitStatus == -1) {
         exit(EXIT_FAILURE);
     }
+   /* generate files in the directory */
    if (writeFile(directoryName, list) == 0) {
         exit(EXIT_FAILURE);
    }
    destroyList(list);
    return 0;
+}
+
+void createStartAndEnd(struct room **list) {
+    char start[15] = "START_ROOM";
+    char end[15] = "END_ROOM";
+    int head = -1, tail = -1;
+
+    /* create random values for start and end */
+    head = rand() % SELECTED;
+    do {
+        tail = rand() % SELECTED;
+    } while (tail == head);
+    /* replace old strings with new strings*/
+    if (list[head]->roomType) {
+        free(list[head]->roomType);
+        list[head]->roomType = NULL;
+        list[head]->roomType = getString(start);
+    }    
+    if (list[tail]->roomType) {
+        free(list[tail]->roomType);
+        list[tail]->roomType = NULL;
+        list[tail]->roomType = getString(end);
+    }    
+}
+
+/*
+
+*/
+char *getString(char *data) {
+    char *newStr = NULL;
+    int size = strlen(data) + 1;
+
+    if (size == 1) { return NULL; }
+    newStr = (char *)malloc(size * sizeof(char));
+    assert (newStr != 0);
+    strcpy(newStr, data);
+    return newStr;
 }
 
 

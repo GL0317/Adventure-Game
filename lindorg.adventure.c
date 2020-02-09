@@ -42,6 +42,40 @@ char *getString(char *data);
 char *getData(char *line);
 void readOneRoom(FILE *reader,struct room *aRoom, char *line);
 char *openDirectory();
+void readDirectory (char *directoryName, struct room **list);
+void readFile(char *directoryName, char *fileName, struct room *aRoom);
+void countAllConnections (struct room **list);
+void displayRoom(FILE *stream,struct room *aRoom);
+
+/*** tests ***/
+/*
+
+*/
+void writeRoom(FILE *stream,struct room *aRoom) {
+    int j = 0;
+
+    fprintf(stream, "ROOM NAME: %s\n", aRoom->name);
+    while (aRoom->connections[j] && j < CONN_SZ) {
+        fprintf(stream, "CONNECTION %d: %s\n", (j + 1), aRoom->connections[j]);
+        ++j;
+    }
+    fprintf (stream, "ROOM TYPE: %s\n", aRoom->roomType);
+    fprintf (stream, "COUNT: %d\n", aRoom->connectCount);
+}
+
+void showAll(struct room **list) {
+    int i;
+
+    for (i = 0; i < SELECTED; ++i) {
+        displayRoom(stdout, list[i]);
+    }
+}
+
+
+
+
+
+/***************/
 
 
 int main() {
@@ -49,16 +83,35 @@ int main() {
     struct room **list = NULL;
 
     /* set up the game */
+    list = makeRoomList();
     directoryName = openDirectory();
+    readDirectory(directoryName, list);
 
     /* interact with user */
+    showAll(list);
 
-    list = makeRoomList();
 
     if (directoryName) { free(directoryName); directoryName = NULL; }
     destroyList(list);
     return 0;
 }
+
+
+/*
+
+*/
+void displayRoom(FILE *stream,struct room *aRoom) {
+    int j = 0;
+
+    fprintf(stream, "ROOM NAME: %s\n", aRoom->name);
+    while (aRoom->connections[j] && j < CONN_SZ) {
+        fprintf(stream, "CONNECTION %d: %s\n", (j + 1), aRoom->connections[j]);
+        ++j;
+    }
+    fprintf (stream, "ROOM TYPE: %s\n", aRoom->roomType);
+    printf("\n");
+}
+
 
 /*
 
@@ -119,19 +172,30 @@ char *openDirectory() {
 
 */
 void readDirectory (char *directoryName, struct room **list) {
-    char *newDirName = NULL;
     DIR *dirToCheck;
     char *target = "_room";
     int roomIndex = 0;
+    struct dirent *fileInDir;
+    char fileName[STR];
 
+    memset(fileName, '\0', STR);
     /* open specified directory */
-    /* check if its open */
-    /* search each entry in the directory */
-    /* if prefix match entry */
-    /* get the attributes of the entry */
-    /* read the file */
-    /* get the most recent directory name */
+    dirToCheck = opendir(directoryName);
+    if (dirToCheck > 0) { /* check if its open */
+        /* search each entry in the directory */
+        while ((fileInDir = readdir(dirToCheck)) != NULL) {
+            /* if prefix match entry */
+            if (strstr(fileInDir->d_name, target) != NULL) {
+                memset(fileName, '\0', STR);
+                strcpy(fileName, fileInDir->d_name);
+                /* read the file */
+                readFile(directoryName, fileName, list[roomIndex]);
+                ++roomIndex;
+            }
+        }
+    }
     /* close directory */
+    closedir(dirToCheck);
 }
 
 
@@ -139,14 +203,31 @@ void readDirectory (char *directoryName, struct room **list) {
 
 
 */
-void readFile(char *directoryName, char *fileName, struct room **list, int index) {
+void readFile(char *directoryName, char *fileName, struct room *aRoom) {
+    char filePath[STR];
+    char line[STR];
+    FILE *reader;
 
+    memset(filePath, '\0', STR);
+    memset(line, '\0', STR);
+    strcpy(filePath, fileName);
    /* generate filePath */
+    createFileName(filePath, directoryName, aRoom);
    /* open file */
+   reader = fopen(filePath, "r");
    /* check file */
+   if (!reader) {
+       fprintf(stderr, "Error openning file to read\n");
+       exit(EXIT_FAILURE);
+   }
    /* read the file */
+   while(!feof(reader)) {
+       fgets(line, STR, reader);
+       readOneRoom(reader, aRoom, line);
+       fgets(line, STR, reader);
+   }
    /* close the file */
-
+   fclose(reader);
 }
 
 
@@ -158,11 +239,11 @@ void readOneRoom(FILE *reader,struct room *aRoom, char *line) {
 
     /* since name is already read, copy name to room */
     aRoom->name = getString(getData(line));
-    printf("ROOM NAME: %s", aRoom->name); /******************************************/
     /* now reading connection data on file */
     fgets(line, STR, reader);
     while (strstr(line, "CONNECTION") && i < CONN_SZ) {
         aRoom->connections[i] = getString(getData(line));
+        ++aRoom->connectCount;
         ++i;
         fgets(line, STR, reader);
     }
@@ -182,17 +263,19 @@ void readOneRoom(FILE *reader,struct room *aRoom, char *line) {
 */
 void createFileName(char *fileName, char *directoryName, struct room *aRoom) {
     char fowardSlash[2] = "/";
-    char suffix[6] = "_room";
+    char tempPath[STR];
     
+    memset(tempPath, '\0', STR);
     /* copy directory name to file name */
-    strcpy(fileName, directoryName);
+    strcpy(tempPath, directoryName);
     /* concatenate the forward slash */
-    strcat(fileName, fowardSlash);
-    /* concatenate the room name */
-    strcat(fileName, aRoom->name); 
-    /* concatenate the suffix */
-    strcat(fileName, suffix); 
+    strcat(tempPath, fowardSlash);
+    /* concatenate the file name */
+    strcat(tempPath, fileName); 
+    memset(fileName, '\0', STR);
+    strcpy(fileName, tempPath);
 }
+
 
 /*
 
@@ -205,6 +288,7 @@ char *getData(char *line) {
     result = strtok(NULL, "\n");
     return result;
 }
+
 
 /*
 
@@ -219,7 +303,6 @@ char *getString(char *data) {
     strcpy(newStr, data);
     return newStr;
 }
-
 
 
 
@@ -282,11 +365,4 @@ void destroyList(struct room **list) {
         list = NULL;
     }
 }
-
-
-
-
-
-
-
 
