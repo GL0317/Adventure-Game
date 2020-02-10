@@ -55,31 +55,7 @@ int prompt(struct room **list, int index, int showMenu);
 void *getTime(void *argument);
 void showLineFromFile(char *filename);
 
-/*** tests ***/
-/*
 
-*/
-void writeRoom(FILE *stream,struct room *aRoom) {
-    int j = 0;
-
-    fprintf(stream, "ROOM NAME: %s\n", aRoom->name);
-    while (aRoom->connections[j] && j < CONN_SZ) {
-        fprintf(stream, "CONNECTION %d: %s\n", (j + 1), aRoom->connections[j]);
-        ++j;
-    }
-    fprintf (stream, "ROOM TYPE: %s\n", aRoom->roomType);
-    fprintf (stream, "COUNT: %d\n", aRoom->connectCount);
-}
-
-void showAll(struct room **list) {
-    int i;
-
-    for (i = 0; i < SELECTED; ++i) {
-        displayRoom(stdout, list[i]);
-    }
-}
-
-/***************/
 pthread_mutex_t myMutex = PTHREAD_MUTEX_INITIALIZER;
 
 
@@ -97,8 +73,6 @@ int main() {
     list = makeRoomList();
     directoryName = openDirectory();
     readDirectory(directoryName, list);
-    printf("----Bank ----\n");
- /*   showAll(list);                 */
     printf("------------\n");
     /* interact with user */
     /* main mutex lock*/
