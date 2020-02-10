@@ -1,5 +1,5 @@
 /*
- NAME:
+ NAME: lindorg.adventure.c
 
  SYNOPSIS:  To compile program ...
     gcc -o lindorg.adventure lindorg.adventure.c -lpthread
@@ -38,7 +38,7 @@ struct room {
 
 struct room **makeRoomList();
 void destroyList(struct room **list);
-void createFileName(char *fileName, char *directoryName, struct room *aRoom);
+void createFileName(char *fileName, char *directoryName);
 char *getString(char *data);
 char *getData(char *line);
 void readOneRoom(FILE *reader,struct room *aRoom, char *line);
@@ -73,7 +73,6 @@ int main() {
     list = makeRoomList();
     directoryName = openDirectory();
     readDirectory(directoryName, list);
-    printf("------------\n");
     /* interact with user */
     /* main mutex lock*/
     pthread_mutex_lock(&myMutex);
@@ -84,26 +83,26 @@ int main() {
     start = searchRooms(list, "N/A", 0);
     /* find end room */
     end = searchRooms(list, "N/A", 1);
-
-    printf("End Room = %d\n", end);
     do {
     /* prompt user */
         previousRoom = start;
         result = prompt(list, start, 1);
         /* when time is called, stay in the same room */
         if (result == SELECTED) {
-             /* main mutex unlock */
-            pthread_mutex_unlock(&myMutex);
-             /* use pthread join to block until second thread completes */
-             resultCode = pthread_join(myThreadID, NULL);
-            assert(0 == resultCode);
-            /* main mutex lock */
-            pthread_mutex_lock(&myMutex);
-            /* recreate the second thread */
-            resultCode = pthread_create( &myThreadID, NULL, getTime, NULL);
-            showLineFromFile("currentTime.txt");
-            result = previousRoom; 
-            result = prompt(list, result, 0);
+            do {
+                 /* main mutex unlock */
+                pthread_mutex_unlock(&myMutex);
+                 /* use pthread join to block until second thread completes */
+                 resultCode = pthread_join(myThreadID, NULL);
+                assert(0 == resultCode);
+                /* main mutex lock */
+                pthread_mutex_lock(&myMutex);
+                /* recreate the second thread */
+                resultCode = pthread_create( &myThreadID, NULL, getTime, NULL);
+                showLineFromFile("currentTime.txt");
+                result = previousRoom; 
+                result = prompt(list, result, 0);
+            } while (result == SELECTED); /* if the user selects "time" repetitively */
         }
         start = result;
         if (result != previousRoom) { 
@@ -124,6 +123,9 @@ int main() {
 }
 
 
+/*
+Reads the first line of a file and outputs the content
+*/
 void showLineFromFile(char *filename) {
     FILE *reader;
     char theTime[STR];
@@ -138,6 +140,9 @@ void showLineFromFile(char *filename) {
 }
 
 
+/*
+Writes the local time to a file name "currentTime.txt"
+*/
 void *getTime(void *argument) {
     char filename [] = "currentTime.txt";
     FILE *afile;
@@ -173,7 +178,11 @@ void *getTime(void *argument) {
     return NULL;
 }
 
-
+/*
+Prompts the user make a selection via a menu selection display.
+Returns the index of the selected rooms.
+If the user selects "time", the prompt returns the size of the list.
+*/
 int prompt(struct room **list, int index, int showMenu) {
     char response[STR];
     int i, strSize, before;
@@ -205,7 +214,7 @@ int prompt(struct room **list, int index, int showMenu) {
 
 
 /*
-
+Provides game UI using the values of a selected room
 */
 void mainMenu(struct room *aRoom) {
     int j = 0;
@@ -221,6 +230,12 @@ void mainMenu(struct room *aRoom) {
 }
 
 
+/*
+Verifies that the user enters a valid selected room or "time".
+Returns the room index when a room is verified.
+Returns the size of a list, if user inputs "time"
+Otherwise returns -1 for user inputs that cannot be verified.
+*/
 int checkInput(struct room **list, struct room *aRoom, char *response) {
     int roomIndex = -1;
     int size = strlen(response) + 1;
@@ -242,7 +257,9 @@ int checkInput(struct room **list, struct room *aRoom, char *response) {
 
 
 /*
-
+Searches the connections of Room.  Each connection holds the name of room
+that the user can travel to.
+Returns the index of the connected room otherwise returns -1
 */
 int searchConnections(struct room *aRoom, char *item) {
     int i, found = -1;
@@ -258,7 +275,12 @@ int searchConnections(struct room *aRoom, char *item) {
 
 
 /*
-
+Searches a room with the option to search by name, the start room, and
+the end room:
+    @section - 0 means search for start room
+               1 means search for end room
+               2 means search a room by search item
+Returns the index of the room that matches the desired search options.
 */
 int searchRooms(struct room **list, char *item, int section) {
     int startRoom = -1;
@@ -294,7 +316,7 @@ int searchRooms(struct room **list, char *item, int section) {
 
 
 /*
-
+Displays all the contents of a room
 */
 void displayRoom(FILE *stream,struct room *aRoom) {
     int j = 0;
@@ -310,7 +332,7 @@ void displayRoom(FILE *stream,struct room *aRoom) {
 
 
 /*
-
+Counts all the connections that a room has.
 */
 void countAllConnections (struct room **list) {
     int i, j, count;
@@ -328,7 +350,9 @@ void countAllConnections (struct room **list) {
 
 
 /*
-
+Opens current directory and searches for a directory with the
+prefix "lindorg.rooms.".
+Returns the full name of that directory
 */
 char *openDirectory() {
     int newestTime = -1;
@@ -365,7 +389,7 @@ char *openDirectory() {
 
 
 /*
-
+Opens a directory and reads all files in that directory.
 */
 void readDirectory (char *directoryName, struct room **list) {
     DIR *dirToCheck;
@@ -396,8 +420,8 @@ void readDirectory (char *directoryName, struct room **list) {
 
 
 /*
-
-
+Reads one file where the format of that file fills in the 
+data members of a room structure
 */
 void readFile(char *directoryName, char *fileName, struct room *aRoom) {
     char filePath[STR];
@@ -408,7 +432,7 @@ void readFile(char *directoryName, char *fileName, struct room *aRoom) {
     memset(line, '\0', STR);
     strcpy(filePath, fileName);
    /* generate filePath */
-    createFileName(filePath, directoryName, aRoom);
+    createFileName(filePath, directoryName);
    /* open file */
    reader = fopen(filePath, "r");
    /* check file */
@@ -428,7 +452,8 @@ void readFile(char *directoryName, char *fileName, struct room *aRoom) {
 
 
 /*
-
+Reads each line in a file and stores the data in a data member
+of a room structure
 */
 void readOneRoom(FILE *reader,struct room *aRoom, char *line) {
     int i = 0;
@@ -454,10 +479,9 @@ void readOneRoom(FILE *reader,struct room *aRoom, char *line) {
 
 
 /*
-
-
+Combines a directory name, filename, and a room name to a file path 
 */
-void createFileName(char *fileName, char *directoryName, struct room *aRoom) {
+void createFileName(char *fileName, char *directoryName) {
     char fowardSlash[2] = "/";
     char tempPath[STR];
     
@@ -474,7 +498,7 @@ void createFileName(char *fileName, char *directoryName, struct room *aRoom) {
 
 
 /*
-
+Tokenize a string, and returns one word
 */
 char *getData(char *line) {
     char *result = NULL;
@@ -487,7 +511,7 @@ char *getData(char *line) {
 
 
 /*
-
+Copies a string data and returns the string to destination
 */
 char *getString(char *data) {
     char *newStr = NULL;
