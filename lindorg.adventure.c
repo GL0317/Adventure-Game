@@ -18,6 +18,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <pthread.h>
 
 
 #define SELECTED 7
@@ -50,7 +51,8 @@ int searchRooms(struct room **list, char *item, int section);
 int searchConnections(struct room *aRoom, char *item);
 void mainMenu(struct room *aRoom);
 int checkInput(struct room **list, struct room *aRoom, char *response);
-int prompt(struct room **list, int index);
+int prompt(struct room **list, int index, int showMenu);
+void *getTime(void *argument);
 
 /*** tests ***/
 /*
@@ -77,6 +79,7 @@ void showAll(struct room **list) {
 }
 
 /***************/
+pthread_mutex_t myMutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 int main() {
@@ -85,16 +88,22 @@ int main() {
     int start = -1, end = -1, result = -1;
     char *victoryPath[1000];
     int vStep = 0, previousRoom = -1;
+    int resultCode;
+    pthread_t myThreadID;
+
 
     /* set up the game */
     list = makeRoomList();
     directoryName = openDirectory();
     readDirectory(directoryName, list);
-    
     printf("----Bank ----\n");
-    showAll(list);
+ /*   showAll(list);                 */
     printf("------------\n");
     /* interact with user */
+    /* main mutex lock*/
+    pthread_mutex_lock(&myMutex);
+    /* create second thread */
+    resultCode = pthread_create(&myThreadID, NULL, getTime, NULL);
     /* find start room */
     start = searchRooms(list, "N/A", 0);
     /* find end room */
@@ -104,12 +113,26 @@ int main() {
     do {
     /* prompt user */
         previousRoom = start;
-        result = prompt(list, start);
+        result = prompt(list, start, 1);
+        /* when time is called, stay in the same room */
+        if (result == SELECTED) {
+             /* main mutex unlock */
+            pthread_mutex_unlock(&myMutex);
+             /* use pthread join to block until second thread completes */
+             resultCode = pthread_join(myThreadID, NULL);
+            /* main mutex lock */
+            pthread_mutex_lock(&myMutex);
+            /* recreate the second thread */
+            resultCode = pthread_create( &myThreadID, NULL, getTime, NULL);
+            result = previousRoom; 
+            result = prompt(list, result, 0);
+        }
         start = result;
-        victoryPath[vStep] = list[result]->name;
-        ++vStep;
+        if (result != previousRoom) { 
+            victoryPath[vStep] = list[result]->name;
+            ++vStep;
+        }
     } while (start != end);
-
     /* victory message */
     printf("YOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n");
     printf("YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS: \n", vStep);
@@ -123,14 +146,26 @@ int main() {
 }
 
 
-int prompt(struct room **list, int index) {
+void *getTime(void *argument) {
+    /* mutext lock in the 2nd thread */
+    pthread_mutex_lock(&myMutex);
+    printf("\n1:03pm, Tuesday, September 13, 2016\n\n");
+/*    printf("WHERE TO? >)");  */
+    pthread_mutex_unlock(&myMutex);
+    /* unlock the mutext */
+}
+
+
+int prompt(struct room **list, int index, int showMenu) {
     char response[STR];
-    int i, strSize, previous;
+    int i, strSize, before;
 
     do {
-        previous = index;
+        before = index;
         memset(response, '\0', STR);
-        mainMenu(list[index]);
+        if (showMenu) {
+            mainMenu(list[index]);
+        }
         printf("WHERE TO? >");
         fgets(response, STR, stdin);
         strSize = strlen(response);
@@ -144,7 +179,7 @@ int prompt(struct room **list, int index) {
         index = checkInput(list, list[index], response);
         if (index == -1) {
             printf("\nHUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN.\n\n");
-            index = previous;
+            index = before;
         }
     } while (index == -1);
     return index;
