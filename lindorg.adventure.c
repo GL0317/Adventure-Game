@@ -226,7 +226,7 @@ void mainMenu(struct room *aRoom) {
     fprintf(stdout, "CURRENT LOCATIONS: %s\n", aRoom->name);
     printf("POSSIBLE CONNECTIONS: ");
     while (aRoom->connections[j] && j < (aRoom->connectCount - 1)) {
-        fprintf(stdout, "%s,", aRoom->connections[j]);
+        fprintf(stdout, "%s, ", aRoom->connections[j]);
         ++j;
     }
     fprintf(stdout, "%s.\n", aRoom->connections[j]);
