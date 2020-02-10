@@ -4,6 +4,10 @@
  SYNOPSIS:  To compile program ...
     gcc -o lindorg.adventure lindorg.adventure.c -lpthread
 
+ DESCRIPTION:
+    This program simulates a text base adventure game where a user is placed in a starting location,
+    and the user must find the "end room".
+    The program uses concurrency to display to the user current local time.
  AUTHOR:  Gerson Lindor Jr. (lindorg@oregonstate.edu)
  DATE CREATED: February 8, 2020
  LAST MODIFIED: February 9, 2020
