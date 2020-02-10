@@ -1,12 +1,19 @@
 /*
- NAME:
+ NAME: lindorg.buildrooms.c
 
  SYNOPSIS:  To compile program ...
     gcc -o lindorg.buildrooms lindorg.buildrooms.c
+ 
+ DESCRIPTION:
+    This program implements a graph to form connections between seven randomly selected rooms out
+    of ten total rooms.
+    Each room are connected between 3 to 6 other rooms.
+    The Program creates a directory named "lindorg.buildrooms", and in the directory,
+    the program writes seven files where each files contains data of one room.
 
  AUTHOR:  Gerson Lindor Jr.
  DATE CREATED: January 26, 2020
- LAST MODIFIED: February 8, 2020
+ LAST MODIFIED: February 9, 2020
 */
 
 #include <stdio.h>
@@ -84,6 +91,9 @@ int main() {
    return 0;
 }
 
+/*
+ Randomly selects the start and end room of the seven selected rooms
+*/
 void createStartAndEnd(struct room **list) {
     char start[15] = "START_ROOM";
     char end[15] = "END_ROOM";
@@ -108,7 +118,8 @@ void createStartAndEnd(struct room **list) {
 }
 
 /*
-
+Copies a string from source to destination, but the new string is 
+dynamically allocated.
 */
 char *getString(char *data) {
     char *newStr = NULL;
@@ -171,8 +182,8 @@ void destroyList(struct room **list) {
 
 
 /*
-Creates a directory
-
+Creates a directory.
+Returns 0 is the directy is created, otherwise returns -1.
 */
 int makeDir(char * directoryName, int pid) {
     int flag = 0;
@@ -195,8 +206,8 @@ int makeDir(char * directoryName, int pid) {
 
 
 /*
-writes files to a specific directory
-
+writes seven files to a specific directory
+Returns 1 if file is created, otherwise returns 0.
 */
 int writeFile(char *directoryName, struct room **list) {
     int flag = 1;
@@ -227,8 +238,8 @@ int writeFile(char *directoryName, struct room **list) {
 
 
 /*
-
-
+Generates a file path into a file name.
+file path will be in this format: dirName/Chamber_room
 */
 void createFileName(char *fileName, char *directoryName, struct room *aRoom) {
     char fowardSlash[2] = "/";
@@ -246,7 +257,7 @@ void createFileName(char *fileName, char *directoryName, struct room *aRoom) {
 
 
 /*
-
+    Writes the contents of a room to a specified I/O stream
 */
 void writeOneRoom(FILE *stream,struct room *aRoom) {
     int j = 0;
@@ -272,7 +283,6 @@ void createGraph(struct room **list) {
 
 /*
 Return 1 if all rooms have 3 to 6 outbound connections, otherwise returns 0
-
 */
 int  isGraphFull(struct room **list) {
     int flag = 1;
@@ -293,7 +303,6 @@ int  isGraphFull(struct room **list) {
 
 /*
 Adds a random, valid outbound connection from a Room to another Room
-
 */
 void addRandomConnection(struct room **list) {
     struct room *A = NULL;
@@ -316,7 +325,8 @@ void addRandomConnection(struct room **list) {
 
 
 /*
-
+    Verifies that all selected rooms in a list are unique.
+    Returns 0 if no duplication found, otherwise returns 1
 */
 int duplicateRooms(struct room **list, char *search) {
     int i = 0;
@@ -333,7 +343,10 @@ int duplicateRooms(struct room **list, char *search) {
 
 
 /*
-
+    Randomly selects one room from the room word bank (10 rooms).
+    Returns the name of the selected room.
+    The function also verifies that the room selected from word bank is not
+    on the selected rooms list.
 */
 char *roomBank(struct room **list) {
     char *selected = NULL;
@@ -354,7 +367,7 @@ char *roomBank(struct room **list) {
 
 
 /*
-
+    Generates a random list of seven selected rooms
 */
 void makeRandomList(struct room **list) {
     int i;
@@ -384,7 +397,6 @@ void makeRandomList(struct room **list) {
 
 /*
 Returns a random Room, does NOT validate if connection can be added
-
 */
 struct room *getRandomRoom(struct room **list) {
     int roomIndex;
@@ -399,7 +411,6 @@ struct room *getRandomRoom(struct room **list) {
 
 /*
 Returns 0 if a connection can be added from Room x ( < 6 outbound connections), otherwise returns 0
-
 */
 int canAddConnectionFrom(struct room *roomX) {
     int flag = 0;
@@ -414,7 +425,6 @@ int canAddConnectionFrom(struct room *roomX) {
 
 /* 
 Returns 1 if a connection from Room x to Room y already exists, otherwise returns 0
-
 */
 int connectionAlreadyExists(struct room *roomX, struct room *roomY) {
     int flag = 0;
@@ -432,7 +442,6 @@ int connectionAlreadyExists(struct room *roomX, struct room *roomY) {
 
 /*
 Connect Rooms x and y together, does not check if this connection is valid
-
 */
 void connectRoom( struct room *roomX, struct room *roomY) {
     int index = roomX->connectCount;
@@ -447,7 +456,6 @@ void connectRoom( struct room *roomX, struct room *roomY) {
 
 /*
 Returns 1 if roomX and roomY are the same room, otherwise returns 0
-
 */
 int isSameRoom(struct room *roomX, struct room *roomY) {
     int flag = 0;
