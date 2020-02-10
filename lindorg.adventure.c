@@ -6,7 +6,7 @@
 
  AUTHOR:  Gerson Lindor Jr. (lindorg@oregonstate.edu)
  DATE CREATED: February 8, 2020
- LAST MODIFIED: February 8, 2020
+ LAST MODIFIED: February 9, 2020
 */
 
 #include <stdio.h>
@@ -53,6 +53,7 @@ void mainMenu(struct room *aRoom);
 int checkInput(struct room **list, struct room *aRoom, char *response);
 int prompt(struct room **list, int index, int showMenu);
 void *getTime(void *argument);
+void showLineFromFile(char *filename);
 
 /*** tests ***/
 /*
@@ -88,7 +89,7 @@ int main() {
     int start = -1, end = -1, result = -1;
     char *victoryPath[1000];
     int vStep = 0, previousRoom = -1;
-    int resultCode;
+    int resultCode = -1;
     pthread_t myThreadID;
 
 
@@ -104,6 +105,7 @@ int main() {
     pthread_mutex_lock(&myMutex);
     /* create second thread */
     resultCode = pthread_create(&myThreadID, NULL, getTime, NULL);
+    assert(0 == resultCode);
     /* find start room */
     start = searchRooms(list, "N/A", 0);
     /* find end room */
@@ -120,10 +122,12 @@ int main() {
             pthread_mutex_unlock(&myMutex);
              /* use pthread join to block until second thread completes */
              resultCode = pthread_join(myThreadID, NULL);
+            assert(0 == resultCode);
             /* main mutex lock */
             pthread_mutex_lock(&myMutex);
             /* recreate the second thread */
             resultCode = pthread_create( &myThreadID, NULL, getTime, NULL);
+            showLineFromFile("currentTime.txt");
             result = previousRoom; 
             result = prompt(list, result, 0);
         }
@@ -146,13 +150,53 @@ int main() {
 }
 
 
+void showLineFromFile(char *filename) {
+    FILE *reader;
+    char theTime[STR];
+
+    memset(theTime, '\0', STR);
+    reader = fopen(filename, "r");
+    if (reader) {
+        fgets(theTime, STR, reader);
+    }
+    fclose(reader);
+    printf("\n%s\n\n", theTime);
+}
+
+
 void *getTime(void *argument) {
+    char filename [] = "currentTime.txt";
+    FILE *afile;
+    time_t aTime;
+    struct tm *tmp;
+    char theTime[STR];
+
     /* mutext lock in the 2nd thread */
     pthread_mutex_lock(&myMutex);
-    printf("\n1:03pm, Tuesday, September 13, 2016\n\n");
-/*    printf("WHERE TO? >)");  */
-    pthread_mutex_unlock(&myMutex);
+    /* get local time */
+    aTime = time(NULL);
+    tmp = localtime(&aTime);
+    if(!tmp) {
+        fprintf(stderr, "local time error\n");
+        exit(EXIT_FAILURE);
+    }
+    if(strftime(theTime, STR, "%I:%M%P, %A, %B %d, %Y", tmp) == 0) {
+        fprintf(stderr, "Error time is undefined\n");
+        exit(EXIT_FAILURE);
+    }
+    /* write to file */
+    afile = fopen(filename, "w");
+    if (afile) {
+        /* write time to a file */
+        fprintf(afile, "%s\n", theTime);
+    } else {
+        fprintf(stderr, "Unable to write to file\n");
+        exit(EXIT_FAILURE);
+    }
+    fclose(afile);
     /* unlock the mutext */
+    pthread_mutex_unlock(&myMutex);
+    return NULL;
 }
 
 
